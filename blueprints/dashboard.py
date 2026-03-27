@@ -14,6 +14,8 @@ def api_summary():
     conn = get_db()
     try:
         cur = conn.cursor()
+
+        # All structures with online service count
         cur.execute("""
             SELECT s.*,
                    COALESCE(svc.online_count, 0) AS online_service_count,
@@ -61,10 +63,12 @@ def api_summary():
             total_monthly_cost += monthly_cost
             enriched.append(s)
 
+        # Sort by days_remaining for at-risk list
         at_risk_list = sorted(
             [s for s in enriched if s['state'] == 'online' and s['days_remaining'] < 14],
             key=lambda x: x['days_remaining']
         )
+        # Top profitable
         profitable_list = sorted(
             [s for s in enriched if s['profit_status'] == 'profitable'],
             key=lambda x: x['monthly_profit'],
