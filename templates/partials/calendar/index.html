@@ -1,12 +1,7 @@
-<style>
-[hidden]{display:none!important}
-</style>
+<style>[hidden]{display:none!important}</style>
 
 <div class="page-header">
-    <div class="page-header-row">
-        <div class="page-icon amber">📅</div>
-        <h1 class="page-title">Replenishment Calendar</h1>
-    </div>
+    <div class="page-header-row"><div class="page-icon amber">📅</div><h1 class="page-title">Replenishment Calendar</h1></div>
     <div class="page-subtitle">Fuel run-out dates and resupply planning</div>
 </div>
 
@@ -24,101 +19,70 @@
 </div>
 
 <script>
-(function() {
-    var _events = [];
-    var _year = new Date().getFullYear();
-    var _month = new Date().getMonth();
+(function(){
+    var _events=[];
+    var _year=new Date().getFullYear();
+    var _month=new Date().getMonth();
+    var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-    var DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-    function load() {
-        fetch('/api/calendar/events').then(function(r){return r.json();}).then(function(data) {
-            _events = data;
-            renderCalendar();
-            renderList();
-        }).catch(function() {
-            document.getElementById('eventsList').innerHTML = '<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';
-        });
+    function load(){
+        fetch('/api/calendar/events').then(function(r){return r.json();}).then(function(data){
+            _events=data; renderCalendar(); renderList();
+        }).catch(function(){document.getElementById('eventsList').innerHTML='<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';});
     }
 
-    function renderCalendar() {
-        document.getElementById('calMonthLabel').textContent = MONTHS[_month] + ' ' + _year;
-        var firstDay = new Date(_year, _month, 1).getDay();
-        var daysInMonth = new Date(_year, _month + 1, 0).getDate();
-        var daysInPrev = new Date(_year, _month, 0).getDate();
-        var today = new Date();
-        var todayStr = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
-        var evMap = {};
-        _events.forEach(function(e) {
-            if (!evMap[e.date]) evMap[e.date] = [];
-            evMap[e.date].push(e);
-        });
-        var html = '';
-        DAYS.forEach(function(d) { html += '<div class="cal-header">' + d + '</div>'; });
-        var total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-        for (var i = 0; i < total; i++) {
-            var day, isOther = false;
-            if (i < firstDay) { day = daysInPrev - firstDay + i + 1; isOther = true; }
-            else if (i >= firstDay + daysInMonth) { day = i - firstDay - daysInMonth + 1; isOther = true; }
-            else { day = i - firstDay + 1; }
-            var dateStr = _year + '-' + pad(_month+1) + '-' + pad(day);
-            if (isOther) {
-                var om = _month + (i < firstDay ? -1 : 1);
-                var oy = _year;
-                if (om < 0) { om = 11; oy--; } else if (om > 11) { om = 0; oy++; }
-                dateStr = oy + '-' + pad(om+1) + '-' + pad(day);
-            }
-            var isToday = dateStr === todayStr;
-            html += '<div class="cal-day' + (isOther ? ' other-month' : '') + (isToday ? ' today' : '') + '">' +
-                '<div class="cal-day-num">' + day + '</div>';
-            if (evMap[dateStr]) {
-                evMap[dateStr].slice(0,3).forEach(function(e) {
-                    var short = e.name.length > 12 ? e.name.substr(0,10)+'…' : e.name;
-                    var label = e.type === 'runout' ? '⛽ ' + short : '⚠ ' + short;
-                    html += '<div class="cal-event ' + e.severity + '" title="' + e.name + (e.type==='runout'?' — runs out':' — 7d warning') + '">' + label + '</div>';
+    function pad(n){return n<10?'0'+n:''+n;}
+
+    function renderCalendar(){
+        document.getElementById('calMonthLabel').textContent=MONTHS[_month]+' '+_year;
+        var firstDay=new Date(_year,_month,1).getDay();
+        var daysInMonth=new Date(_year,_month+1,0).getDate();
+        var daysInPrev=new Date(_year,_month,0).getDate();
+        var today=new Date();
+        var todayStr=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
+        var evMap={};
+        _events.forEach(function(e){if(!evMap[e.date])evMap[e.date]=[];evMap[e.date].push(e);});
+        var html='';
+        DAYS.forEach(function(d){html+='<div class="cal-header">'+d+'</div>';});
+        var total=Math.ceil((firstDay+daysInMonth)/7)*7;
+        for(var i=0;i<total;i++){
+            var day,isOther=false;
+            if(i<firstDay){day=daysInPrev-firstDay+i+1;isOther=true;}
+            else if(i>=firstDay+daysInMonth){day=i-firstDay-daysInMonth+1;isOther=true;}
+            else{day=i-firstDay+1;}
+            var dateStr=_year+'-'+pad(_month+1)+'-'+pad(day);
+            if(isOther){var om=_month+(i<firstDay?-1:1),oy=_year;if(om<0){om=11;oy--;}else if(om>11){om=0;oy++;}dateStr=oy+'-'+pad(om+1)+'-'+pad(day);}
+            var isToday=dateStr===todayStr;
+            html+='<div class="cal-day'+(isOther?' other-month':'')+(isToday?' today':'')+'">'+'<div class="cal-day-num">'+day+'</div>';
+            if(evMap[dateStr]){
+                evMap[dateStr].slice(0,3).forEach(function(e){
+                    var short=e.name.length>12?e.name.substr(0,10)+'…':e.name;
+                    var label=e.type==='runout'?'⛽ '+short:'⚠ '+short;
+                    html+='<div class="cal-event '+e.severity+'" title="'+e.name+(e.type==='runout'?' — runs out':' — 7d warning')+'">'+label+'</div>';
                 });
-                if (evMap[dateStr].length > 3) html += '<div class="cal-event muted">+' + (evMap[dateStr].length-3) + ' more</div>';
+                if(evMap[dateStr].length>3)html+='<div class="cal-event muted">+'+(evMap[dateStr].length-3)+' more</div>';
             }
-            html += '</div>';
+            html+='</div>';
         }
-        document.getElementById('calendarGrid').innerHTML = html;
+        document.getElementById('calendarGrid').innerHTML=html;
     }
 
-    function renderList() {
-        var today = new Date().toISOString().slice(0,10);
-        var upcoming = _events.filter(function(e) { return e.date >= today; }).slice(0, 30);
-        if (!upcoming.length) {
-            document.getElementById('eventsList').innerHTML = '<div class="empty-state" style="padding:20px 0">No upcoming fuel events.</div>';
-            return;
-        }
-        var html = '<table class="data-grid"><thead><tr>' +
-            '<th>Date</th><th>Structure</th><th>System</th><th>Event</th><th>Days Left</th>' +
-            '</tr></thead><tbody>';
-        upcoming.forEach(function(e) {
-            var sev = e.severity;
-            var sevColor = sev==='danger' ? '#ef4444' : (sev==='warning' ? '#f0a020' : '#00d4aa');
-            html += '<tr>' +
-                '<td class="mono">' + e.date + '</td>' +
-                '<td style="font-weight:500">' + e.name + '</td>' +
-                '<td style="color:#8892a4">' + (e.system||'—') + '</td>' +
-                '<td><span style="color:' + sevColor + '">' + (e.type==='runout' ? '⛽ Fuel Out' : '⚠ 7-Day Alert') + '</span></td>' +
-                '<td class="mono" style="color:' + sevColor + '">' + e.days_remaining.toFixed(1) + 'd</td>' +
-            '</tr>';
+    function renderList(){
+        var today=new Date().toISOString().slice(0,10);
+        var upcoming=_events.filter(function(e){return e.date>=today;}).slice(0,30);
+        if(!upcoming.length){document.getElementById('eventsList').innerHTML='<div class="empty-state" style="padding:20px 0">No upcoming fuel events.</div>';return;}
+        var html='<table class="data-grid"><thead><tr><th>Date</th><th>Structure</th><th>System</th><th>Event</th><th>Days Left</th></tr></thead><tbody>';
+        upcoming.forEach(function(e){
+            var sev=e.severity;
+            var sevColor=sev==='danger'?'#ef4444':(sev==='warning'?'#f0a020':'#00d4aa');
+            html+='<tr><td class="mono">'+e.date+'</td><td style="font-weight:500">'+e.name+'</td><td style="color:#8892a4">'+(e.system||'—')+'</td><td><span style="color:'+sevColor+'">'+(e.type==='runout'?'⛽ Fuel Out':'⚠ 7-Day Alert')+'</span></td><td class="mono" style="color:'+sevColor+'">'+e.days_remaining.toFixed(1)+'d</td></tr>';
         });
-        html += '</tbody></table>';
-        document.getElementById('eventsList').innerHTML = html;
+        html+='</tbody></table>';
+        document.getElementById('eventsList').innerHTML=html;
     }
 
-    function pad(n) { return n < 10 ? '0'+n : ''+n; }
-
-    window.changeMonth = function(dir) {
-        _month += dir;
-        if (_month > 11) { _month = 0; _year++; }
-        if (_month < 0) { _month = 11; _year--; }
-        renderCalendar();
-    };
-
+    window.changeMonth=function(dir){_month+=dir;if(_month>11){_month=0;_year++;}if(_month<0){_month=11;_year--;}renderCalendar();};
     load();
 })();
 </script>

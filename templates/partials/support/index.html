@@ -1,8 +1,5 @@
 <div class="page-header">
-    <div class="page-header-row">
-        <div class="page-icon teal">💬</div>
-        <h1 class="page-title">Support</h1>
-    </div>
+    <div class="page-header-row"><div class="page-icon teal">💬</div><h1 class="page-title">Support</h1></div>
     <div class="page-subtitle">Help and resources for ESPFM</div>
 </div>
 
@@ -53,16 +50,8 @@
 </div>
 
 <script>
-(function() {
-    window.checkDebug = function() {
-        fetch('/api/debug').then(function(r){return r.json();}).then(function(d) {
-            document.getElementById('debugOutput').textContent = JSON.stringify(d, null, 2);
-        });
-    };
-    window.checkHealth = function() {
-        fetch('/api/health').then(function(r){return r.json();}).then(function(d) {
-            document.getElementById('debugOutput').textContent = JSON.stringify(d, null, 2);
-        });
-    };
+(function(){
+    window.checkDebug=function(){fetch('/api/debug').then(function(r){return r.json();}).then(function(d){document.getElementById('debugOutput').textContent=JSON.stringify(d,null,2);});};
+    window.checkHealth=function(){fetch('/api/health').then(function(r){return r.json();}).then(function(d){document.getElementById('debugOutput').textContent=JSON.stringify(d,null,2);});};
 })();
 </script>
