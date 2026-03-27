@@ -12,9 +12,7 @@
 
 <div class="toolbar">
     <input type="text" class="search-input" id="structSearch" placeholder="Search structures…" oninput="filterStructures()">
-    <select id="structTypeFilter" onchange="filterStructures()">
-        <option value="">All Types</option>
-    </select>
+    <select id="structTypeFilter" onchange="filterStructures()"><option value="">All Types</option></select>
     <select id="structStateFilter" onchange="filterStructures()">
         <option value="">All States</option>
         <option value="online">Online</option>
@@ -35,70 +33,18 @@
         </div>
         <div id="formErrors" class="alert danger" hidden></div>
         <form id="structForm" onsubmit="return false">
-            <div class="form-group">
-                <label class="form-label">Name *</label>
-                <input type="text" class="dark-input" id="fName" placeholder="e.g. Jita Trading Hub" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Structure Type *</label>
-                <select class="dark-select" id="fType"></select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">System</label>
-                <input type="text" class="dark-input" id="fSystem" placeholder="e.g. Jita">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Region</label>
-                <input type="text" class="dark-input" id="fRegion" placeholder="e.g. The Forge">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Security Class</label>
-                <select class="dark-select" id="fSec">
-                    <option value="highsec">Highsec</option>
-                    <option value="lowsec">Lowsec</option>
-                    <option value="nullsec">Nullsec</option>
-                    <option value="wormhole">Wormhole</option>
-                    <option value="pochven">Pochven</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Owner Corp</label>
-                <input type="text" class="dark-input" id="fCorp" placeholder="Corporation name">
-            </div>
-            <div class="form-group">
-                <label class="form-label">State</label>
-                <select class="dark-select" id="fState">
-                    <option value="online">Online</option>
-                    <option value="offline">Offline</option>
-                    <option value="reinforced">Reinforced</option>
-                    <option value="abandoned">Abandoned</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Fuel Type</label>
-                <select class="dark-select" id="fFuelType">
-                    <option>Caldari Fuel Blocks</option>
-                    <option>Minmatar Fuel Blocks</option>
-                    <option>Amarr Fuel Blocks</option>
-                    <option>Gallente Fuel Blocks</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Current Fuel (blocks)</label>
-                <input type="number" class="dark-input" id="fFuel" value="0" min="0">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Fuel Bay Capacity (blocks)</label>
-                <input type="number" class="dark-input" id="fBayCap" value="50000" min="1">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Fuel Price per Block (ISK)</label>
-                <input type="number" class="dark-input" id="fFuelPrice" value="0" min="0" step="0.01" placeholder="e.g. 17500">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Notes</label>
-                <textarea class="dark-textarea" id="fNotes" placeholder="Optional notes…"></textarea>
-            </div>
+            <div class="form-group"><label class="form-label">Name *</label><input type="text" class="dark-input" id="fName" placeholder="e.g. Jita Trading Hub" required></div>
+            <div class="form-group"><label class="form-label">Structure Type *</label><select class="dark-select" id="fType"></select></div>
+            <div class="form-group"><label class="form-label">System</label><input type="text" class="dark-input" id="fSystem" placeholder="e.g. Jita"></div>
+            <div class="form-group"><label class="form-label">Region</label><input type="text" class="dark-input" id="fRegion" placeholder="e.g. The Forge"></div>
+            <div class="form-group"><label class="form-label">Security Class</label><select class="dark-select" id="fSec"><option value="highsec">Highsec</option><option value="lowsec">Lowsec</option><option value="nullsec">Nullsec</option><option value="wormhole">Wormhole</option><option value="pochven">Pochven</option></select></div>
+            <div class="form-group"><label class="form-label">Owner Corp</label><input type="text" class="dark-input" id="fCorp" placeholder="Corporation name"></div>
+            <div class="form-group"><label class="form-label">State</label><select class="dark-select" id="fState"><option value="online">Online</option><option value="offline">Offline</option><option value="reinforced">Reinforced</option><option value="abandoned">Abandoned</option></select></div>
+            <div class="form-group"><label class="form-label">Fuel Type</label><select class="dark-select" id="fFuelType"><option>Caldari Fuel Blocks</option><option>Minmatar Fuel Blocks</option><option>Amarr Fuel Blocks</option><option>Gallente Fuel Blocks</option></select></div>
+            <div class="form-group"><label class="form-label">Current Fuel (blocks)</label><input type="number" class="dark-input" id="fFuel" value="0" min="0"></div>
+            <div class="form-group"><label class="form-label">Fuel Bay Capacity (blocks)</label><input type="number" class="dark-input" id="fBayCap" value="50000" min="1"></div>
+            <div class="form-group"><label class="form-label">Fuel Price per Block (ISK)</label><input type="number" class="dark-input" id="fFuelPrice" value="0" min="0" step="0.01" placeholder="e.g. 17500"></div>
+            <div class="form-group"><label class="form-label">Notes</label><textarea class="dark-textarea" id="fNotes" placeholder="Optional notes…"></textarea></div>
             <div class="btn-row">
                 <button class="btn teal" onclick="saveStructure()">Save</button>
                 <button class="btn muted" onclick="closeForm()">Cancel</button>
@@ -110,28 +56,20 @@
 
 <script>
 (function() {
-    var _structs = [];
-    var _editId = null;
-    var _types = [];
-
+    var _structs = [], _editId = null, _types = [];
     function fmtISK(n) {
         if (!n && n !== 0) return '—';
         var abs = Math.abs(n);
-        if (abs >= 1e9) return (n/1e9).toFixed(2) + 'B';
-        if (abs >= 1e6) return (n/1e6).toFixed(2) + 'M';
-        if (abs >= 1e3) return (n/1e3).toFixed(1) + 'K';
+        if (abs >= 1e9) return (n/1e9).toFixed(2)+'B';
+        if (abs >= 1e6) return (n/1e6).toFixed(2)+'M';
+        if (abs >= 1e3) return (n/1e3).toFixed(1)+'K';
         return Number(n).toFixed(0);
     }
-
     function fuelGauge(current, cap, days) {
         var pct = cap > 0 ? Math.min(current / cap * 100, 100) : 0;
         var cls = pct > 50 ? 'ok' : (pct > 20 ? 'warn' : 'danger');
-        return '<div class="fuel-gauge-wrap" style="width:120px">' +
-            '<div class="fuel-gauge-track"><div class="fuel-gauge-fill ' + cls + '" style="width:' + pct.toFixed(0) + '%"></div></div>' +
-            '<div class="fuel-gauge-label"><span class="days">' + (days >= 9999 ? 'N/A' : days.toFixed(1) + 'd') + '</span><span class="pct">' + pct.toFixed(0) + '%</span></div>' +
-            '</div>';
+        return '<div class="fuel-gauge-wrap" style="width:120px"><div class="fuel-gauge-track"><div class="fuel-gauge-fill ' + cls + '" style="width:' + pct.toFixed(0) + '%"></div></div><div class="fuel-gauge-label"><span class="days">' + (days >= 9999 ? 'N/A' : days.toFixed(1) + 'd') + '</span><span class="pct">' + pct.toFixed(0) + '%</span></div></div>';
     }
-
     function loadMeta() {
         fetch('/api/structures/meta').then(function(r){return r.json();}).then(function(m) {
             _types = m.types || [];
@@ -143,42 +81,32 @@
             _types.forEach(function(t) { filter.innerHTML += '<option>' + t + '</option>'; });
         });
     }
-
     function loadStructures() {
         fetch('/api/structures').then(function(r){return r.json();}).then(function(data) {
-            _structs = data;
-            renderTable(_structs);
+            _structs = data; renderTable(_structs);
         }).catch(function() {
             document.getElementById('structuresTable').innerHTML = '<div class="alert warning">No data. Initialize DB tables from the Dashboard first.</div>';
         });
     }
-
     function renderTable(rows) {
-        if (!rows.length) {
-            document.getElementById('structuresTable').innerHTML = '<div class="empty-state"><div class="empty-icon">🏗</div>No structures yet. Click <strong>+ Add Structure</strong> to get started.</div>';
-            return;
-        }
-        var html = '<table class="data-grid"><thead><tr>' +
-            '<th>Name</th><th>Type</th><th>Sec</th><th>System / Region</th>' +
-            '<th>State</th><th>Fuel</th><th>Burn/h</th><th>Price/block</th><th></th>' +
-            '</tr></thead><tbody>';
+        if (!rows.length) { document.getElementById('structuresTable').innerHTML = '<div class="empty-state"><div class="empty-icon">🏗</div>No structures yet. Click <strong>+ Add Structure</strong> to get started.</div>'; return; }
+        var html = '<table class="data-grid"><thead><tr><th>Name</th><th>Type</th><th>Sec</th><th>System / Region</th><th>State</th><th>Fuel</th><th>Burn/h</th><th>Price/block</th><th></th></tr></thead><tbody>';
         rows.forEach(function(s) {
-            html += '<tr>' +
-                '<td style="font-weight:500">' + s.name + '</td>' +
-                '<td><span class="pill muted">' + s.type_name + '</span></td>' +
-                '<td><span class="pill ' + (s.security_class||'highsec') + '">' + (s.security_class||'—') + '</span></td>' +
-                '<td><div style="font-size:11px">' + (s.system||'—') + '</div><div style="font-size:10px;color:#6b7280">' + (s.region||'') + '</div></td>' +
-                '<td><span class="pill ' + (s.state||'online') + '">' + (s.state||'online') + '</span></td>' +
-                '<td>' + fuelGauge(s.current_fuel, s.fuel_bay_capacity, s.days_remaining) + '</td>' +
-                '<td class="mono">' + (s.burn_rate||0) + '</td>' +
-                '<td class="mono">' + fmtISK(s.fuel_price_per_block) + '</td>' +
-                '<td><button class="btn-sm teal" onclick="openForm(' + JSON.stringify(s).replace(/"/g,'&quot;') + ')">Edit</button></td>' +
-                '</tr>';
+            html += '<tr>'
+                + '<td style="font-weight:500">' + s.name + '</td>'
+                + '<td><span class="pill muted">' + s.type_name + '</span></td>'
+                + '<td><span class="pill ' + (s.security_class||'highsec') + '">' + (s.security_class||'—') + '</span></td>'
+                + '<td><div style="font-size:11px">' + (s.system||'—') + '</div><div style="font-size:10px;color:#6b7280">' + (s.region||'') + '</div></td>'
+                + '<td><span class="pill ' + (s.state||'online') + '">' + (s.state||'online') + '</span></td>'
+                + '<td>' + fuelGauge(s.current_fuel, s.fuel_bay_capacity, s.days_remaining) + '</td>'
+                + '<td class="mono">' + (s.burn_rate||0) + '</td>'
+                + '<td class="mono">' + fmtISK(s.fuel_price_per_block) + '</td>'
+                + '<td><button class="btn-sm teal" onclick="openForm(' + JSON.stringify(s).replace(/"/g,'&quot;') + ')">Edit</button></td>'
+                + '</tr>';
         });
         html += '</tbody></table>';
         document.getElementById('structuresTable').innerHTML = html;
     }
-
     window.filterStructures = function() {
         var q = (document.getElementById('structSearch').value || '').toLowerCase();
         var type = document.getElementById('structTypeFilter').value;
@@ -191,7 +119,6 @@
         });
         renderTable(filtered);
     };
-
     window.openForm = function(s) {
         _editId = s ? s.id : null;
         document.getElementById('formTitle').textContent = s ? 'Edit Structure' : 'Add Structure';
@@ -216,63 +143,26 @@
         }
         document.getElementById('formOverlay').hidden = false;
     };
-
-    window.closeForm = function() {
-        document.getElementById('formOverlay').hidden = true;
-        _editId = null;
-    };
-
+    window.closeForm = function() { document.getElementById('formOverlay').hidden = true; _editId = null; };
     window.saveStructure = function() {
-        var payload = {
-            name: document.getElementById('fName').value,
-            type_name: document.getElementById('fType').value,
-            system: document.getElementById('fSystem').value,
-            region: document.getElementById('fRegion').value,
-            security_class: document.getElementById('fSec').value,
-            owner_corp: document.getElementById('fCorp').value,
-            state: document.getElementById('fState').value,
-            fuel_type: document.getElementById('fFuelType').value,
-            current_fuel: parseInt(document.getElementById('fFuel').value) || 0,
-            fuel_bay_capacity: parseInt(document.getElementById('fBayCap').value) || 50000,
-            fuel_price_per_block: parseFloat(document.getElementById('fFuelPrice').value) || 0,
-            notes: document.getElementById('fNotes').value,
-        };
+        var payload = { name: document.getElementById('fName').value, type_name: document.getElementById('fType').value, system: document.getElementById('fSystem').value, region: document.getElementById('fRegion').value, security_class: document.getElementById('fSec').value, owner_corp: document.getElementById('fCorp').value, state: document.getElementById('fState').value, fuel_type: document.getElementById('fFuelType').value, current_fuel: parseInt(document.getElementById('fFuel').value) || 0, fuel_bay_capacity: parseInt(document.getElementById('fBayCap').value) || 50000, fuel_price_per_block: parseFloat(document.getElementById('fFuelPrice').value) || 0, notes: document.getElementById('fNotes').value };
         var url = _editId ? '/api/structures/' + _editId : '/api/structures';
         var method = _editId ? 'PUT' : 'POST';
         fetch(url, {method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)})
             .then(function(r) { return r.json(); })
             .then(function(d) {
-                if (d.errors) {
-                    var el = document.getElementById('formErrors');
-                    el.textContent = d.errors.join(' ');
-                    el.hidden = false;
-                    return;
-                }
-                if (d.error) {
-                    espfmToast(d.error, 'error');
-                    return;
-                }
-                closeForm();
-                espfmToast(_editId ? 'Structure updated.' : 'Structure added.', 'success');
-                loadStructures();
+                if (d.errors) { var el = document.getElementById('formErrors'); el.textContent = d.errors.join(' '); el.hidden = false; return; }
+                if (d.error) { espfmToast(d.error, 'error'); return; }
+                closeForm(); espfmToast(_editId ? 'Structure updated.' : 'Structure added.', 'success'); loadStructures();
             });
     };
-
     window.deleteStructure = function() {
         if (!_editId) return;
         if (!confirm('Delete this structure and all its data? This cannot be undone.')) return;
-        fetch('/api/structures/' + _editId, {method: 'DELETE'})
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-                if (d.ok) {
-                    closeForm();
-                    espfmToast('Structure deleted.', 'info');
-                    loadStructures();
-                }
-            });
+        fetch('/api/structures/' + _editId, {method: 'DELETE'}).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.ok) { closeForm(); espfmToast('Structure deleted.', 'info'); loadStructures(); }
+        });
     };
-
-    loadMeta();
-    loadStructures();
+    loadMeta(); loadStructures();
 })();
 </script>

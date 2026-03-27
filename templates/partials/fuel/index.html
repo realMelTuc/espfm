@@ -5,7 +5,6 @@
 .fuel-card-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; color: #fff; font-weight: 600; }
 .fuel-card-meta { font-size: 11px; color: #6b7280; }
 .fuel-card-stats { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
-.fuel-stat { }
 .fuel-stat-val { font-size: 15px; font-family: 'Geist Mono', monospace; color: #e6e8eb; }
 .fuel-stat-label { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
 .big-gauge-track { height: 12px; background: #111620; border-radius: 6px; overflow: hidden; margin: 10px 0; }
@@ -39,22 +38,11 @@
 
 <div class="modal-overlay" id="updateFuelOverlay" hidden onclick="if(event.target===this)closeFuelUpdate()">
     <div class="modal-panel">
-        <div class="modal-header">
-            <div class="modal-title">Update Fuel</div>
-            <button class="modal-close" onclick="closeFuelUpdate()">×</button>
-        </div>
+        <div class="modal-header"><div class="modal-title">Update Fuel</div><button class="modal-close" onclick="closeFuelUpdate()">×</button></div>
         <div style="color:#8892a4;font-size:12px;margin-bottom:16px" id="updateFuelStructName"></div>
-        <div class="form-group">
-            <label class="form-label">Current Fuel (blocks)</label>
-            <input type="number" class="dark-input" id="updateFuelAmount" min="0" placeholder="e.g. 25000">
-        </div>
-        <div class="form-group">
-            <label class="form-label" style="color:#4b5563">This records a snapshot and updates current stock.</label>
-        </div>
-        <div class="btn-row">
-            <button class="btn teal" onclick="submitFuelUpdate()">Save Snapshot</button>
-            <button class="btn muted" onclick="closeFuelUpdate()">Cancel</button>
-        </div>
+        <div class="form-group"><label class="form-label">Current Fuel (blocks)</label><input type="number" class="dark-input" id="updateFuelAmount" min="0" placeholder="e.g. 25000"></div>
+        <div class="form-group"><label class="form-label" style="color:#4b5563">This records a snapshot and updates current stock.</label></div>
+        <div class="btn-row"><button class="btn teal" onclick="submitFuelUpdate()">Save Snapshot</button><button class="btn muted" onclick="closeFuelUpdate()">Cancel</button></div>
     </div>
 </div>
 
@@ -62,9 +50,7 @@
 
 <script>
 (function() {
-    var _fuel = [];
-    var _updateStructId = null;
-
+    var _fuel = [], _updateStructId = null;
     function fmtISK(n) {
         if (!n && n !== 0) return '—';
         var abs = Math.abs(n);
@@ -73,128 +59,69 @@
         if (abs >= 1e3) return (n/1e3).toFixed(1)+'K';
         return n.toFixed(0);
     }
-
     function loadFuel() {
         fetch('/api/fuel/summary').then(function(r){return r.json();}).then(function(data) {
             _fuel = data;
-            var risk=0, warn=0, safe=0;
-            data.forEach(function(s) {
-                if (s.days_remaining < 7) risk++;
-                else if (s.days_remaining < 14) warn++;
-                else safe++;
-            });
-            document.getElementById('fuelAtRisk').textContent = risk;
-            document.getElementById('fuelWarn').textContent = warn;
-            document.getElementById('fuelSafe').textContent = safe;
-            document.getElementById('fuelTotal').textContent = data.length;
+            var risk=0,warn=0,safe=0;
+            data.forEach(function(s) { if(s.days_remaining<7)risk++; else if(s.days_remaining<14)warn++; else safe++; });
+            document.getElementById('fuelAtRisk').textContent=risk;
+            document.getElementById('fuelWarn').textContent=warn;
+            document.getElementById('fuelSafe').textContent=safe;
+            document.getElementById('fuelTotal').textContent=data.length;
             renderCards(data);
-        }).catch(function() {
-            document.getElementById('fuelCards').innerHTML = '<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';
-        });
+        }).catch(function() { document.getElementById('fuelCards').innerHTML='<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>'; });
     }
-
     function renderCards(rows) {
-        if (!rows.length) {
-            document.getElementById('fuelCards').innerHTML = '<div class="empty-state"><div class="empty-icon">⛽</div>No online structures found. Add structures first.</div>';
-            return;
-        }
-        var html = '';
+        if (!rows.length) { document.getElementById('fuelCards').innerHTML='<div class="empty-state"><div class="empty-icon">⛽</div>No online structures found.</div>'; return; }
+        var html='';
         rows.forEach(function(s) {
-            var pct = s.fill_pct || 0;
-            var cls = pct > 50 ? 'ok' : (pct > 20 ? 'warn' : 'danger');
-            var fillColor = {ok:'#00d4aa',warn:'#f0a020',danger:'#ef4444',full:'#22c55e'}[cls];
-            var daysColor = s.days_remaining < 3 ? '#ef4444' : (s.days_remaining < 7 ? '#f0a020' : '#e6e8eb');
-            html += '<div class="fuel-card">' +
-                '<div class="fuel-card-header">' +
-                    '<div>' +
-                        '<div class="fuel-card-name">' + s.name + '</div>' +
-                        '<div class="fuel-card-meta">' + s.type_name + ' · ' + (s.system||'—') + ' · ' + (s.fuel_type||'Fuel Blocks') + '</div>' +
-                    '</div>' +
-                    '<div style="display:flex;gap:8px">' +
-                        '<button class="btn-sm teal" onclick="openFuelUpdate(' + s.id + ',\'' + s.name.replace(/\'/g,"\\\'") + '\')">Update Fuel</button>' +
-                        '<button class="btn-sm muted" onclick="loadHistory(' + s.id + ')">History</button>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="big-gauge-track"><div class="big-gauge-fill" style="width:' + pct.toFixed(0) + '%;background:' + fillColor + '"></div></div>' +
-                '<div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:12px">' +
-                    '<span>' + (s.current_fuel||0).toLocaleString() + ' / ' + (s.fuel_bay_capacity||0).toLocaleString() + ' blocks (' + pct.toFixed(0) + '%)</span>' +
-                    '<span style="color:' + daysColor + ';font-family:\'Geist Mono\',monospace;font-weight:600">' + (s.days_remaining >= 9999 ? 'N/A' : s.days_remaining.toFixed(1) + ' days remaining') + '</span>' +
-                '</div>' +
-                '<div class="fuel-card-stats">' +
-                    '<div class="fuel-stat"><div class="fuel-stat-val">' + (s.burn_rate||0) + ' /hr</div><div class="fuel-stat-label">Burn Rate</div></div>' +
-                    '<div class="fuel-stat"><div class="fuel-stat-val">' + (s.daily_burn||0).toLocaleString() + ' /day</div><div class="fuel-stat-label">Daily Burn</div></div>' +
-                    '<div class="fuel-stat"><div class="fuel-stat-val">' + (s.weekly_burn||0).toLocaleString() + ' /week</div><div class="fuel-stat-label">Weekly Burn</div></div>' +
-                    '<div class="fuel-stat"><div class="fuel-stat-val">' + fmtISK(s.fuel_price_per_block) + ' ISK</div><div class="fuel-stat-label">Price/Block</div></div>' +
-                '</div>' +
-                '<div id="history_' + s.id + '" hidden style="margin-top:12px;border-top:1px solid #1e2530;padding-top:12px"></div>' +
-            '</div>';
+            var pct=s.fill_pct||0;
+            var cls=pct>50?'ok':(pct>20?'warn':'danger');
+            var fillColor={ok:'#00d4aa',warn:'#f0a020',danger:'#ef4444',full:'#22c55e'}[cls];
+            var daysColor=s.days_remaining<3?'#ef4444':(s.days_remaining<7?'#f0a020':'#e6e8eb');
+            html+='<div class="fuel-card"><div class="fuel-card-header"><div><div class="fuel-card-name">'+s.name+'</div><div class="fuel-card-meta">'+s.type_name+' · '+(s.system||'—')+' · '+(s.fuel_type||'Fuel Blocks')+'</div></div>'
+                +'<div style="display:flex;gap:8px"><button class="btn-sm teal" onclick="openFuelUpdate('+s.id+',\''+s.name.replace(/'/g,"\\'")+'\')" >Update Fuel</button><button class="btn-sm muted" onclick="loadHistory('+s.id+')">History</button></div></div>'
+                +'<div class="big-gauge-track"><div class="big-gauge-fill" style="width:'+pct.toFixed(0)+'%;background:'+fillColor+'"></div></div>'
+                +'<div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:12px"><span>'+(s.current_fuel||0).toLocaleString()+' / '+(s.fuel_bay_capacity||0).toLocaleString()+' blocks ('+pct.toFixed(0)+'%)</span><span style="color:'+daysColor+';font-family:\'Geist Mono\',monospace;font-weight:600">'+(s.days_remaining>=9999?'N/A':s.days_remaining.toFixed(1)+' days remaining')+'</span></div>'
+                +'<div class="fuel-card-stats"><div class="fuel-stat"><div class="fuel-stat-val">'+(s.burn_rate||0)+' /hr</div><div class="fuel-stat-label">Burn Rate</div></div><div class="fuel-stat"><div class="fuel-stat-val">'+(s.daily_burn||0).toLocaleString()+' /day</div><div class="fuel-stat-label">Daily Burn</div></div><div class="fuel-stat"><div class="fuel-stat-val">'+(s.weekly_burn||0).toLocaleString()+' /week</div><div class="fuel-stat-label">Weekly Burn</div></div><div class="fuel-stat"><div class="fuel-stat-val">'+fmtISK(s.fuel_price_per_block)+' ISK</div><div class="fuel-stat-label">Price/Block</div></div></div>'
+                +'<div id="history_'+s.id+'" hidden style="margin-top:12px;border-top:1px solid #1e2530;padding-top:12px"></div></div>';
         });
-        document.getElementById('fuelCards').innerHTML = html;
+        document.getElementById('fuelCards').innerHTML=html;
     }
-
-    window.filterFuel = function() {
-        var q = (document.getElementById('fuelSearch').value || '').toLowerCase();
-        var sort = document.getElementById('fuelSortBy').value;
-        var filtered = _fuel.filter(function(s) {
-            return !q || (s.name + (s.system||'')).toLowerCase().indexOf(q) !== -1;
-        });
-        if (sort === 'days_asc') filtered.sort(function(a,b){ return a.days_remaining - b.days_remaining; });
-        else if (sort === 'days_desc') filtered.sort(function(a,b){ return b.days_remaining - a.days_remaining; });
-        else if (sort === 'name') filtered.sort(function(a,b){ return a.name.localeCompare(b.name); });
-        else if (sort === 'burn_desc') filtered.sort(function(a,b){ return b.burn_rate - a.burn_rate; });
+    window.filterFuel=function(){
+        var q=(document.getElementById('fuelSearch').value||'').toLowerCase();
+        var sort=document.getElementById('fuelSortBy').value;
+        var filtered=_fuel.filter(function(s){return !q||(s.name+(s.system||'')).toLowerCase().indexOf(q)!==-1;});
+        if(sort==='days_asc')filtered.sort(function(a,b){return a.days_remaining-b.days_remaining;});
+        else if(sort==='days_desc')filtered.sort(function(a,b){return b.days_remaining-a.days_remaining;});
+        else if(sort==='name')filtered.sort(function(a,b){return a.name.localeCompare(b.name);});
+        else if(sort==='burn_desc')filtered.sort(function(a,b){return b.burn_rate-a.burn_rate;});
         renderCards(filtered);
     };
-
-    window.openFuelUpdate = function(id, name) {
-        _updateStructId = id;
-        document.getElementById('updateFuelStructName').textContent = name;
-        document.getElementById('updateFuelAmount').value = '';
-        document.getElementById('updateFuelOverlay').hidden = false;
-    };
-
-    window.closeFuelUpdate = function() {
-        document.getElementById('updateFuelOverlay').hidden = true;
-        _updateStructId = null;
-    };
-
-    window.submitFuelUpdate = function() {
-        var amount = parseInt(document.getElementById('updateFuelAmount').value);
-        if (isNaN(amount) || amount < 0) { espfmToast('Enter a valid fuel amount.', 'error'); return; }
-        fetch('/api/fuel/' + _updateStructId + '/snapshot', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({fuel_amount: amount})
-        }).then(function(r){return r.json();}).then(function(d) {
-            if (d.ok) {
-                closeFuelUpdate();
-                espfmToast('Fuel snapshot saved. Burn rate: ' + d.burn_rate + '/hr · ' + d.days_remaining.toFixed(1) + ' days remaining.', 'success');
-                loadFuel();
-            } else {
-                espfmToast(d.error || 'Error saving snapshot.', 'error');
-            }
-        });
-    };
-
-    window.loadHistory = function(id) {
-        var el = document.getElementById('history_' + id);
-        if (!el) return;
-        if (!el.hidden) { el.hidden = true; return; }
-        fetch('/api/fuel/' + id + '/snapshots').then(function(r){return r.json();}).then(function(rows) {
-            if (!rows.length) { el.innerHTML = '<div style="color:#4b5563;font-size:11px">No snapshots recorded yet.</div>'; el.hidden = false; return; }
-            var html = '<div style="font-size:10px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Fuel History</div>';
-            html += '<table class="data-grid" style="font-size:11px"><thead><tr><th>Date</th><th>Fuel</th><th>Burn/hr</th><th>Days</th></tr></thead><tbody>';
-            rows.forEach(function(r) {
-                html += '<tr><td class="mono">' + r.snapshot_date + '</td>' +
-                    '<td class="mono">' + (r.fuel_amount||0).toLocaleString() + '</td>' +
-                    '<td class="mono">' + (r.burn_rate_per_hour||0) + '</td>' +
-                    '<td class="mono">' + (r.days_remaining||0) + '</td></tr>';
+    window.openFuelUpdate=function(id,name){_updateStructId=id;document.getElementById('updateFuelStructName').textContent=name;document.getElementById('updateFuelAmount').value='';document.getElementById('updateFuelOverlay').hidden=false;};
+    window.closeFuelUpdate=function(){document.getElementById('updateFuelOverlay').hidden=true;_updateStructId=null;};
+    window.submitFuelUpdate=function(){
+        var amount=parseInt(document.getElementById('updateFuelAmount').value);
+        if(isNaN(amount)||amount<0){espfmToast('Enter a valid fuel amount.','error');return;}
+        fetch('/api/fuel/'+_updateStructId+'/snapshot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fuel_amount:amount})})
+            .then(function(r){return r.json();}).then(function(d){
+                if(d.ok){closeFuelUpdate();espfmToast('Fuel snapshot saved. Burn rate: '+d.burn_rate+'/hr · '+d.days_remaining.toFixed(1)+' days remaining.','success');loadFuel();}
+                else espfmToast(d.error||'Error saving snapshot.','error');
             });
-            html += '</tbody></table>';
-            el.innerHTML = html;
-            el.hidden = false;
+    };
+    window.loadHistory=function(id){
+        var el=document.getElementById('history_'+id);
+        if(!el)return;
+        if(!el.hidden){el.hidden=true;return;}
+        fetch('/api/fuel/'+id+'/snapshots').then(function(r){return r.json();}).then(function(rows){
+            if(!rows.length){el.innerHTML='<div style="color:#4b5563;font-size:11px">No snapshots recorded yet.</div>';el.hidden=false;return;}
+            var html='<div style="font-size:10px;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Fuel History</div>';
+            html+='<table class="data-grid" style="font-size:11px"><thead><tr><th>Date</th><th>Fuel</th><th>Burn/hr</th><th>Days</th></tr></thead><tbody>';
+            rows.forEach(function(r){html+='<tr><td class="mono">'+r.snapshot_date+'</td><td class="mono">'+(r.fuel_amount||0).toLocaleString()+'</td><td class="mono">'+(r.burn_rate_per_hour||0)+'</td><td class="mono">'+(r.days_remaining||0)+'</td></tr>';});
+            html+='</tbody></table>';
+            el.innerHTML=html;el.hidden=false;
         });
     };
-
     loadFuel();
 })();
 </script>
