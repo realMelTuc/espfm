@@ -1,0 +1,190 @@
+<style>
+[hidden]{display:none!important}
+.risk-row td:first-child { font-weight: 500; }
+.structure-row { cursor: pointer; }
+</style>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div class="page-icon teal">⚙</div>
+        <h1 class="page-title">Dashboard</h1>
+    </div>
+    <div class="page-subtitle">Executive overview — structure health, fuel status, and profitability</div>
+</div>
+
+<!-- Alerts banner -->
+<div id="alertsBanner"></div>
+
+<!-- Stats row -->
+<div class="stats-row" id="statsRow">
+    <div class="stat-box"><span class="stat-value" id="statTotal">—</span><span class="stat-label">Total Structures</span></div>
+    <div class="stat-box danger"><span class="stat-value" id="statAtRisk">—</span><span class="stat-label">At Risk (&lt;7d Fuel)</span></div>
+    <div class="stat-box amber"><span class="stat-value" id="statOffline">—</span><span class="stat-label">Offline / Idle</span></div>
+    <div class="stat-box teal"><span class="stat-value" id="statMonthlyCost">—</span><span class="stat-label">Monthly Fuel Cost (ISK)</span></div>
+</div>
+
+<!-- Two-column layout -->
+<div class="two-col">
+    <div class="main-col">
+
+        <!-- At Risk -->
+        <div class="detail-panel">
+            <div class="section-header">
+                <div class="section-title">Structures at Risk</div>
+                <span style="font-size:11px;color:#6b7280">Fuel &lt; 14 days</span>
+            </div>
+            <div id="atRiskContent"><div class="empty-state"><div class="empty-icon">⛽</div>No structures at risk</div></div>
+        </div>
+
+        <!-- All Structures -->
+        <div class="detail-panel">
+            <div class="section-header">
+                <div class="section-title">All Structures</div>
+                <button class="btn-sm teal" onclick="espfmNav('/structures/')">Manage</button>
+            </div>
+            <div id="allStructuresContent"><div class="empty-state"><div class="empty-icon">🏗</div>Loading…</div></div>
+        </div>
+
+    </div>
+    <div class="side-col">
+
+        <!-- Top Profitable -->
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Top Profitable</div>
+            <div id="topProfitableContent"><div class="empty-state" style="padding:20px 0">No profitable structures yet</div></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:12px">Quick Actions</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="btn muted" style="text-align:left" onclick="espfmNav('/structures/')">+ Add Structure</button>
+                <button class="btn muted" style="text-align:left" onclick="espfmNav('/fuel/')">Update Fuel Levels</button>
+                <button class="btn muted" style="text-align:left" onclick="espfmNav('/income/')">Log Income</button>
+                <button class="btn muted" style="text-align:left" onclick="espfmNav('/profitability/')">Run P&L Analysis</button>
+                <button class="btn muted" style="text-align:left" onclick="runMigrate()">Initialize DB Tables</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+(function() {
+    function fmtISK(n) {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        var abs = Math.abs(n);
+        if (abs >= 1e12) return (n/1e12).toFixed(2) + 'T';
+        if (abs >= 1e9) return (n/1e9).toFixed(2) + 'B';
+        if (abs >= 1e6) return (n/1e6).toFixed(2) + 'M';
+        if (abs >= 1e3) return (n/1e3).toFixed(1) + 'K';
+        return n.toFixed(0);
+    }
+
+    function fuelGauge(pct, days) {
+        var cls = pct > 50 ? 'ok' : (pct > 20 ? 'warn' : 'danger');
+        return '<div class="fuel-gauge-wrap">' +
+            '<div class="fuel-gauge-track"><div class="fuel-gauge-fill ' + cls + '" style="width:' + Math.min(pct,100) + '%"></div></div>' +
+            '<div class="fuel-gauge-label"><span class="days">' + (days >= 9999 ? 'N/A' : days.toFixed(1) + 'd') + '</span><span class="pct">' + pct.toFixed(0) + '%</span></div>' +
+            '</div>';
+    }
+
+    function loadDashboard() {
+        fetch('/api/dashboard/summary')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                document.getElementById('statTotal').textContent = d.total_structures;
+                document.getElementById('statAtRisk').textContent = d.at_risk;
+                document.getElementById('statOffline').textContent = d.offline;
+                document.getElementById('statMonthlyCost').textContent = fmtISK(d.total_monthly_cost);
+
+                var banners = '';
+                if (d.at_risk > 0) {
+                    banners += '<div class="alert danger">⚠ ' + d.at_risk + ' structure' + (d.at_risk !== 1 ? 's' : '') + ' have less than 7 days of fuel remaining.</div>';
+                }
+                document.getElementById('alertsBanner').innerHTML = banners;
+
+                var riskHtml = '';
+                if (!d.at_risk_list || d.at_risk_list.length === 0) {
+                    riskHtml = '<div class="empty-state"><div class="empty-icon">✓</div>All structures have adequate fuel</div>';
+                } else {
+                    riskHtml = '<table class="data-grid"><thead><tr>' +
+                        '<th>Structure</th><th>Type</th><th>System</th><th>Fuel</th><th>Days</th><th></th>' +
+                        '</tr></thead><tbody>';
+                    d.at_risk_list.forEach(function(s) {
+                        var cap = s.fuel_bay_capacity || 1;
+                        var pct = Math.min((s.current_fuel / cap) * 100, 100);
+                        var danger = s.days_remaining < 3 ? ' style="color:#ef4444"' : ' style="color:#f0a020"';
+                        riskHtml += '<tr class="structure-row" onclick="espfmNav(\'\'/fuel/\'\')">' +
+                            '<td style="font-weight:500">' + s.name + '</td>' +
+                            '<td><span class="pill muted">' + s.type_name + '</span></td>' +
+                            '<td style="color:#8892a4">' + (s.system || '—') + '</td>' +
+                            '<td>' + fuelGauge(pct, s.days_remaining) + '</td>' +
+                            '<td' + danger + ' class="mono">' + s.days_remaining.toFixed(1) + 'd</td>' +
+                            '<td><button class="btn-sm teal" onclick="event.stopPropagation();espfmNav(\'\'/fuel/\'\')" >Plan</button></td>' +
+                            '</tr>';
+                    });
+                    riskHtml += '</tbody></table>';
+                }
+                document.getElementById('atRiskContent').innerHTML = riskHtml;
+
+                var allHtml = '';
+                if (!d.structures || d.structures.length === 0) {
+                    allHtml = '<div class="empty-state"><div class="empty-icon">🏗</div>No structures configured yet. <button class="btn-sm teal" onclick="espfmNav(\'\'/structures/\'\')" style="margin-left:8px">Add First Structure</button></div>';
+                } else {
+                    allHtml = '<table class="data-grid"><thead><tr>' +
+                        '<th>Name</th><th>Type</th><th>Sec</th><th>State</th><th>Fuel</th><th>Profit Status</th><th>Monthly Profit</th>' +
+                        '</tr></thead><tbody>';
+                    d.structures.forEach(function(s) {
+                        var cap = s.fuel_bay_capacity || 1;
+                        var pct = Math.min((s.current_fuel / cap) * 100, 100);
+                        var profitColor = { profitable: '#22c55e', break_even: '#f59e0b', loss: '#ef4444', idle: '#6b7280' }[s.profit_status] || '#6b7280';
+                        allHtml += '<tr class="structure-row" onclick="espfmNav(\'\'/structures/\'\')">' +
+                            '<td style="font-weight:500">' + s.name + '</td>' +
+                            '<td><span class="pill muted" style="font-size:10px">' + s.type_name + '</span></td>' +
+                            '<td><span class="pill ' + (s.security_class||'highsec') + '">' + (s.security_class||'—') + '</span></td>' +
+                            '<td><span class="pill ' + (s.state||'online') + '">' + (s.state||'online') + '</span></td>' +
+                            '<td style="min-width:110px">' + fuelGauge(pct, s.days_remaining) + '</td>' +
+                            '<td><span class="pill ' + s.profit_status + '">' + s.profit_status.replace('_',' ') + '</span></td>' +
+                            '<td class="mono r" style="color:' + profitColor + '">' + (s.monthly_profit >= 0 ? '+' : '') + fmtISK(s.monthly_profit) + '</td>' +
+                            '</tr>';
+                    });
+                    allHtml += '</tbody></table>';
+                }
+                document.getElementById('allStructuresContent').innerHTML = allHtml;
+
+                var profHtml = '';
+                if (!d.top_profitable || d.top_profitable.length === 0) {
+                    profHtml = '<div class="empty-state" style="padding:20px 0">No profitable structures yet</div>';
+                } else {
+                    d.top_profitable.forEach(function(s) {
+                        profHtml += '<div style="border-bottom:1px solid #1e2530;padding:8px 0">' +
+                            '<div style="font-size:12px;font-weight:500;color:#fff">' + s.name + '</div>' +
+                            '<div style="font-size:10px;color:#8892a4">' + s.type_name + ' · ' + (s.system||'—') + '</div>' +
+                            '<div style="font-size:13px;color:#22c55e;font-family:\'Geist Mono\',monospace;margin-top:3px">+' + fmtISK(s.monthly_profit) + ' /mo</div>' +
+                            '</div>';
+                    });
+                }
+                document.getElementById('topProfitableContent').innerHTML = profHtml;
+            })
+            .catch(function(err) {
+                document.getElementById('allStructuresContent').innerHTML = '<div class="alert warning">Could not load data. Run "Initialize DB Tables" from Quick Actions first.</div>';
+            });
+    }
+
+    window.runMigrate = function() {
+        fetch('/api/migrate', {method:'POST'})
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    espfmToast('Database tables initialized (' + d.tables + ' tables)', 'success');
+                    loadDashboard();
+                } else {
+                    espfmToast('Migration error: ' + d.error, 'error');
+                }
+            });
+    };
+
+    loadDashboard();
+})();
+</script>

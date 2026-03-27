@@ -1,0 +1,91 @@
+<style>[hidden]{display:none!important}</style>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div class="page-icon teal">⚙</div>
+        <h1 class="page-title">Settings</h1>
+    </div>
+    <div class="page-subtitle">Configure ESPFM defaults and fuel pricing</div>
+</div>
+
+<div class="two-col">
+    <div class="main-col">
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Structure Fuel Burn Reference</div>
+            <table class="data-grid" id="burnRefTable">
+                <thead><tr><th>Structure Type</th><th>Base Burn (blocks/hr)</th><th>Daily Burn</th><th>Monthly Burn (30d)</th></tr></thead>
+                <tbody id="burnRefBody"></tbody>
+            </table>
+        </div>
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Database</div>
+            <div style="display:flex;gap:10px">
+                <button class="btn teal" onclick="runMigrate()">Initialize / Migrate Tables</button>
+                <button class="btn muted" onclick="checkHealth()">Check Health</button>
+            </div>
+            <div id="dbStatus" style="margin-top:12px;font-size:11px;color:#6b7280"></div>
+        </div>
+    </div>
+    <div class="side-col">
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Set Fuel Block Price</div>
+            <div style="font-size:11px;color:#8892a4;margin-bottom:12px">Set the ISK price per fuel block across all structures at once.</div>
+            <div class="form-group">
+                <label class="form-label">Price per Block (ISK)</label>
+                <input type="number" class="dark-input" id="bulkFuelPrice" min="0" step="1" placeholder="e.g. 17500">
+            </div>
+            <button class="btn amber" onclick="setBulkPrice()">Apply to All Structures</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    function loadConstants() {
+        fetch('/api/settings/constants').then(function(r){return r.json();}).then(function(d) {
+            var html = '';
+            var burn = d.structure_base_burn || {};
+            Object.keys(burn).forEach(function(t) {
+                var b = burn[t];
+                html += '<tr>' +
+                    '<td style="font-weight:500">' + t + '</td>' +
+                    '<td class="mono">' + b + '</td>' +
+                    '<td class="mono">' + (b*24).toLocaleString() + '</td>' +
+                    '<td class="mono">' + (b*24*30).toLocaleString() + '</td>' +
+                    '</tr>';
+            });
+            document.getElementById('burnRefBody').innerHTML = html || '<tr><td colspan="4" style="color:#4b5563">No data</td></tr>';
+        });
+    }
+
+    window.runMigrate = function() {
+        fetch('/api/migrate', {method:'POST'}).then(function(r){return r.json();}).then(function(d) {
+            var el = document.getElementById('dbStatus');
+            if (d.ok) {
+                el.innerHTML = '<span style="color:#22c55e">✓ ' + d.tables + ' tables initialized.</span>';
+                espfmToast('Database ready.', 'success');
+            } else {
+                el.innerHTML = '<span style="color:#ef4444">✗ ' + d.error + '</span>';
+            }
+        });
+    };
+
+    window.checkHealth = function() {
+        fetch('/api/health').then(function(r){return r.json();}).then(function(d) {
+            document.getElementById('dbStatus').innerHTML = '<span style="color:#00d4aa">✓ App healthy · ' + d.python + '</span>';
+        });
+    };
+
+    window.setBulkPrice = function() {
+        var price = parseFloat(document.getElementById('bulkFuelPrice').value);
+        if (isNaN(price) || price < 0) { espfmToast('Enter a valid price.', 'error'); return; }
+        fetch('/api/settings/bulk-fuel-price', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fuel_price_per_block: price})})
+            .then(function(r){return r.json();}).then(function(d) {
+                if (d.ok) espfmToast('Fuel price set to ' + price.toLocaleString() + ' ISK/block on ' + d.updated + ' structures.', 'success');
+                else espfmToast(d.error, 'error');
+            });
+    };
+
+    loadConstants();
+})();
+</script>

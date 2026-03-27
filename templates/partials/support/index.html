@@ -1,0 +1,68 @@
+<div class="page-header">
+    <div class="page-header-row">
+        <div class="page-icon teal">💬</div>
+        <h1 class="page-title">Support</h1>
+    </div>
+    <div class="page-subtitle">Help and resources for ESPFM</div>
+</div>
+
+<div class="two-col">
+    <div class="main-col">
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Getting Started</div>
+            <ol style="padding-left:18px;font-size:12px;color:#8892a4;line-height:2.2">
+                <li>Go to <strong style="color:#e6e8eb">Dashboard</strong> → click <strong style="color:#00d4aa">Initialize DB Tables</strong> to create the database schema.</li>
+                <li>Go to <strong style="color:#e6e8eb">Settings</strong> and set a fuel block price (check Jita sell price for current value).</li>
+                <li>Go to <strong style="color:#e6e8eb">Structures</strong> → click <strong style="color:#00d4aa">+ Add Structure</strong> to register your first structure.</li>
+                <li>Go to <strong style="color:#e6e8eb">Services</strong> → add your online service modules for that structure.</li>
+                <li>Go to <strong style="color:#e6e8eb">Fuel Planning</strong> → click <strong style="color:#00d4aa">Update Fuel</strong> to enter current stock.</li>
+                <li>Go to <strong style="color:#e6e8eb">Income</strong> → log your tax income from wallet journal exports.</li>
+                <li>Go to <strong style="color:#e6e8eb">Profitability</strong> → click <strong style="color:#00d4aa">Record Snapshots</strong> to save a P&amp;L baseline.</li>
+            </ol>
+        </div>
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">EVE Online Fuel Reference</div>
+            <table class="data-grid">
+                <thead><tr><th>Category</th><th>Structures</th><th>Base Burn</th></tr></thead>
+                <tbody>
+                    <tr><td>Medium Citadels</td><td style="color:#8892a4">Astrahus</td><td class="mono">24/hr</td></tr>
+                    <tr><td>Large Citadels</td><td style="color:#8892a4">Fortizar</td><td class="mono">48/hr</td></tr>
+                    <tr><td>XL Citadels</td><td style="color:#8892a4">Keepstar</td><td class="mono">96/hr</td></tr>
+                    <tr><td>Medium Eng Complex</td><td style="color:#8892a4">Raitaru</td><td class="mono">24/hr</td></tr>
+                    <tr><td>Large Eng Complex</td><td style="color:#8892a4">Azbel</td><td class="mono">48/hr</td></tr>
+                    <tr><td>XL Eng Complex</td><td style="color:#8892a4">Sotiyo</td><td class="mono">96/hr</td></tr>
+                    <tr><td>Moon Refinery</td><td style="color:#8892a4">Athanor / Tatara</td><td class="mono">24 / 48/hr</td></tr>
+                    <tr><td>Jump Gate</td><td style="color:#8892a4">Ansiblex</td><td class="mono">30/hr</td></tr>
+                    <tr><td>Cyno Beacon</td><td style="color:#8892a4">Pharolux</td><td class="mono">10/hr</td></tr>
+                    <tr><td>Cyno Jammer</td><td style="color:#8892a4">Tenebrex</td><td class="mono">30/hr</td></tr>
+                    <tr><td>Service Module</td><td style="color:#8892a4">Any online service</td><td class="mono">+10/hr each</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="side-col">
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:12px">Quick Debug</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="btn muted" onclick="checkDebug()">View App Debug Info</button>
+                <button class="btn muted" onclick="checkHealth()">Check API Health</button>
+            </div>
+            <pre id="debugOutput" style="margin-top:12px;background:#0d1117;border:1px solid #1e2530;border-radius:4px;padding:12px;font-size:10px;color:#8892a4;white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    window.checkDebug = function() {
+        fetch('/api/debug').then(function(r){return r.json();}).then(function(d) {
+            document.getElementById('debugOutput').textContent = JSON.stringify(d, null, 2);
+        });
+    };
+    window.checkHealth = function() {
+        fetch('/api/health').then(function(r){return r.json();}).then(function(d) {
+            document.getElementById('debugOutput').textContent = JSON.stringify(d, null, 2);
+        });
+    };
+})();
+</script>

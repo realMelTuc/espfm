@@ -1,0 +1,209 @@
+<style>
+[hidden]{display:none!important}
+.svc-chip { display:inline-flex;align-items:center;gap:6px;background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:6px 10px;font-size:11px;cursor:pointer;transition:border-color 0.15s; }
+.svc-chip:hover { border-color: #3a4050; }
+.svc-chip.online-chip { border-color: rgba(0,212,170,0.3); }
+.svc-online-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.svc-online-dot.online { background:#00d4aa; }
+.svc-online-dot.offline { background:#4b5563; }
+</style>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div class="page-icon teal">⚡</div>
+        <h1 class="page-title">Service Modules</h1>
+    </div>
+    <div class="page-subtitle">Configure online services per structure — each adds 10 fuel blocks/hr</div>
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+    <select id="svcStructFilter" onchange="loadServices()" style="flex:1;background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:7px 10px;color:#e6e8eb;font-size:12px">
+        <option value="">All Structures</option>
+    </select>
+    <button class="btn teal" onclick="openAddService()">+ Add Service</button>
+</div>
+
+<div id="servicesContent"></div>
+
+<div class="modal-overlay" id="addSvcOverlay" hidden onclick="if(event.target===this)closeAddSvc()">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <div class="modal-title" id="addSvcTitle">Add Service Module</div>
+            <button class="modal-close" onclick="closeAddSvc()">×</button>
+        </div>
+        <div id="addSvcErrors" class="alert danger" hidden></div>
+        <div class="form-group">
+            <label class="form-label">Structure *</label>
+            <select class="dark-select" id="svcFormStruct"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Service Module *</label>
+            <select class="dark-select" id="svcFormType" onchange="setSvcName()"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" class="dark-input" id="svcFormName" placeholder="Module name">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Online</label>
+            <div class="toggle-wrap">
+                <label class="toggle"><input type="checkbox" id="svcFormOnline" checked><span class="toggle-slider"></span></label>
+                <span class="toggle-label">Module is online</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Fuel Burn (blocks/hr)</label>
+            <input type="number" class="dark-input" id="svcFormFuel" value="10" min="0">
+        </div>
+        <div class="btn-row">
+            <button class="btn teal" onclick="saveService()">Save</button>
+            <button class="btn muted" onclick="closeAddSvc()">Cancel</button>
+            <button class="btn danger" id="svcDeleteBtn" hidden onclick="deleteSvc()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var _svcEditId = null;
+    var _moduleTypes = [];
+    var _structures = [];
+
+    function loadMeta() {
+        Promise.all([
+            fetch('/api/structures').then(function(r){return r.json();}),
+            fetch('/api/services/types').then(function(r){return r.json();})
+        ]).then(function(results) {
+            _structures = results[0];
+            _moduleTypes = results[1];
+            var opts = '<option value="">All Structures</option>';
+            var formOpts = '<option value="">— Select —</option>';
+            _structures.forEach(function(s) {
+                opts += '<option value="' + s.id + '">' + s.name + '</option>';
+                formOpts += '<option value="' + s.id + '">' + s.name + '</option>';
+            });
+            document.getElementById('svcStructFilter').innerHTML = opts;
+            document.getElementById('svcFormStruct').innerHTML = formOpts;
+            var typeOpts = '';
+            _moduleTypes.forEach(function(t) { typeOpts += '<option>' + t + '</option>'; });
+            document.getElementById('svcFormType').innerHTML = typeOpts;
+            loadServices();
+        });
+    }
+
+    window.loadServices = function() {
+        var structId = document.getElementById('svcStructFilter').value;
+        var url = structId ? '/api/services/' + structId : '/api/services';
+        fetch(url).then(function(r){return r.json();}).then(function(data) {
+            if (!data.length) {
+                document.getElementById('servicesContent').innerHTML = '<div class="empty-state"><div class="empty-icon">⚡</div>No service modules configured yet.</div>';
+                return;
+            }
+            var byStruct = {};
+            data.forEach(function(m) {
+                var key = m.structure_id + '::' + (m.structure_name || 'Unknown');
+                if (!byStruct[key]) byStruct[key] = [];
+                byStruct[key].push(m);
+            });
+            var html = '';
+            Object.keys(byStruct).forEach(function(key) {
+                var parts = key.split('::');
+                var structName = parts[1];
+                var modules = byStruct[key];
+                var online = modules.filter(function(m){return m.online;}).length;
+                var totalBurn = modules.filter(function(m){return m.online;}).reduce(function(a,m){return a+(m.extra_fuel_per_hour||10);},0);
+                html += '<div class="detail-panel">' +
+                    '<div class="section-header" style="margin-bottom:12px">' +
+                        '<div><div class="section-title">' + structName + '</div><div style="font-size:10px;color:#6b7280;margin-top:2px">' + online + ' online · +' + totalBurn + ' fuel/hr from services</div></div>' +
+                        '<button class="btn-sm teal" onclick="openAddService(' + parts[0] + ')">+ Add</button>' +
+                    '</div>';
+                html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+                modules.forEach(function(m) {
+                    html += '<div class="svc-chip ' + (m.online ? 'online-chip' : '') + '" onclick="editService(' + JSON.stringify(m).replace(/"/g,'&quot;') + ')">' +
+                        '<div class="svc-online-dot ' + (m.online ? 'online' : 'offline') + '"></div>' +
+                        '<span style="color:#e6e8eb">' + m.name + '</span>' +
+                        '<span style="color:#4b5563;font-size:10px">+' + (m.extra_fuel_per_hour||10) + '/hr</span>' +
+                        '<button class="btn-sm muted" style="padding:2px 5px;font-size:10px;margin:0" onclick="event.stopPropagation();toggleSvc(' + m.id + ',this)">' + (m.online ? 'Off' : 'On') + '</button>' +
+                    '</div>';
+                });
+                html += '</div></div>';
+            });
+            document.getElementById('servicesContent').innerHTML = html;
+        }).catch(function() {
+            document.getElementById('servicesContent').innerHTML = '<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';
+        });
+    };
+
+    window.setSvcName = function() {
+        document.getElementById('svcFormName').value = document.getElementById('svcFormType').value;
+    };
+
+    window.openAddService = function(prefillStructId) {
+        _svcEditId = null;
+        document.getElementById('addSvcTitle').textContent = 'Add Service Module';
+        document.getElementById('svcDeleteBtn').hidden = true;
+        document.getElementById('addSvcErrors').hidden = true;
+        document.getElementById('svcFormOnline').checked = true;
+        document.getElementById('svcFormFuel').value = 10;
+        document.getElementById('svcFormName').value = document.getElementById('svcFormType').value;
+        if (prefillStructId) document.getElementById('svcFormStruct').value = prefillStructId;
+        document.getElementById('addSvcOverlay').hidden = false;
+    };
+
+    window.editService = function(m) {
+        _svcEditId = m.id;
+        document.getElementById('addSvcTitle').textContent = 'Edit Service Module';
+        document.getElementById('svcDeleteBtn').hidden = false;
+        document.getElementById('addSvcErrors').hidden = true;
+        document.getElementById('svcFormStruct').value = m.structure_id;
+        document.getElementById('svcFormType').value = m.module_type || m.name;
+        document.getElementById('svcFormName').value = m.name;
+        document.getElementById('svcFormOnline').checked = m.online;
+        document.getElementById('svcFormFuel').value = m.extra_fuel_per_hour || 10;
+        document.getElementById('addSvcOverlay').hidden = false;
+    };
+
+    window.closeAddSvc = function() {
+        document.getElementById('addSvcOverlay').hidden = true;
+        _svcEditId = null;
+    };
+
+    window.saveService = function() {
+        var errs = document.getElementById('addSvcErrors');
+        errs.hidden = true;
+        var payload = {
+            structure_id: document.getElementById('svcFormStruct').value,
+            name: document.getElementById('svcFormName').value,
+            module_type: document.getElementById('svcFormType').value,
+            online: document.getElementById('svcFormOnline').checked,
+            extra_fuel_per_hour: parseInt(document.getElementById('svcFormFuel').value) || 10,
+        };
+        var url = _svcEditId ? '/api/services/' + _svcEditId : '/api/services';
+        var method = _svcEditId ? 'PUT' : 'POST';
+        fetch(url, {method:method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
+            .then(function(r){return r.json();})
+            .then(function(d) {
+                if (d.errors) { errs.textContent = d.errors.join(' '); errs.hidden = false; return; }
+                closeAddSvc();
+                espfmToast(_svcEditId ? 'Module updated.' : 'Module added.', 'success');
+                loadServices();
+            });
+    };
+
+    window.deleteSvc = function() {
+        if (!_svcEditId || !confirm('Delete this service module?')) return;
+        fetch('/api/services/' + _svcEditId, {method:'DELETE'}).then(function(r){return r.json();}).then(function(d) {
+            if (d.ok) { closeAddSvc(); espfmToast('Module deleted.', 'info'); loadServices(); }
+        });
+    };
+
+    window.toggleSvc = function(id, btn) {
+        fetch('/api/services/' + id + '/toggle', {method:'POST'}).then(function(r){return r.json();}).then(function(d) {
+            espfmToast('Module ' + (d.online ? 'brought online' : 'taken offline') + '.', 'info');
+            loadServices();
+        });
+    };
+
+    loadMeta();
+})();
+</script>

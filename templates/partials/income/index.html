@@ -1,0 +1,202 @@
+<style>
+[hidden]{display:none!important}
+</style>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div class="page-icon teal">💰</div>
+        <h1 class="page-title">Income Tracking</h1>
+    </div>
+    <div class="page-subtitle">Log and analyse structure income streams — taxes, rentals, and more</div>
+</div>
+
+<div class="two-col">
+    <div class="main-col">
+        <div class="toolbar" style="margin-bottom:16px">
+            <select id="incomeStructFilter" onchange="loadIncomeTable()" style="background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:7px 10px;color:#e6e8eb;font-size:12px;flex:1">
+                <option value="">All Structures</option>
+            </select>
+            <select id="incomeTypeFilter" onchange="loadIncomeTable()" style="background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:7px 10px;color:#e6e8eb;font-size:12px">
+                <option value="">All Types</option>
+                <option value="industry_tax">Industry Tax</option>
+                <option value="market_tax">Market Tax</option>
+                <option value="reprocessing_tax">Reprocessing Tax</option>
+                <option value="moon_rental">Moon Rental</option>
+                <option value="office_rental">Office Rental</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div class="detail-panel" style="margin-bottom:16px">
+            <div class="section-title" style="margin-bottom:14px">30-Day Income Summary</div>
+            <div id="incomeSummary"><div style="color:#4b5563;font-size:12px">Loading…</div></div>
+        </div>
+        <div class="detail-panel">
+            <div class="section-header">
+                <div class="section-title">Income Entries</div>
+            </div>
+            <div id="incomeTable"></div>
+        </div>
+    </div>
+    <div class="side-col">
+        <div class="detail-panel">
+            <div class="section-title" style="margin-bottom:14px">Log Income Entry</div>
+            <div id="incomeFormErrors" class="alert danger" hidden></div>
+            <div class="form-group">
+                <label class="form-label">Structure *</label>
+                <select class="dark-select" id="incomeFormStruct"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Income Type *</label>
+                <select class="dark-select" id="incomeFormType">
+                    <option value="industry_tax">Industry Tax</option>
+                    <option value="market_tax">Market Tax</option>
+                    <option value="reprocessing_tax">Reprocessing Tax</option>
+                    <option value="moon_rental">Moon Rental</option>
+                    <option value="office_rental">Office Rental</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Amount (ISK) *</label>
+                <input type="number" class="dark-input" id="incomeFormAmount" min="0.01" step="0.01" placeholder="e.g. 500000000">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" class="dark-input" id="incomeFormDate">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="dark-textarea" id="incomeFormNotes" rows="2" placeholder="Optional…"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="btn teal" onclick="submitIncome()">Add Entry</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var _structures = [];
+
+    function fmtISK(n) {
+        if (!n && n !== 0) return '—';
+        var abs = Math.abs(n);
+        if (abs >= 1e9) return (n/1e9).toFixed(2)+'B';
+        if (abs >= 1e6) return (n/1e6).toFixed(2)+'M';
+        if (abs >= 1e3) return (n/1e3).toFixed(1)+'K';
+        return Number(n).toLocaleString();
+    }
+
+    function typeLabel(t) {
+        return { industry_tax:'Industry Tax', market_tax:'Market Tax', reprocessing_tax:'Reprocessing', moon_rental:'Moon Rental', office_rental:'Office Rental', other:'Other' }[t] || t;
+    }
+
+    function loadStructures() {
+        fetch('/api/structures').then(function(r){return r.json();}).then(function(data) {
+            _structures = data;
+            var opts = '<option value="">— Select —</option>';
+            var filterOpts = '<option value="">All Structures</option>';
+            data.forEach(function(s) {
+                opts += '<option value="' + s.id + '">' + s.name + '</option>';
+                filterOpts += '<option value="' + s.id + '">' + s.name + '</option>';
+            });
+            document.getElementById('incomeFormStruct').innerHTML = opts;
+            document.getElementById('incomeStructFilter').innerHTML = filterOpts;
+            loadSummary();
+            loadIncomeTable();
+        });
+    }
+
+    function loadSummary() {
+        fetch('/api/income/summary').then(function(r){return r.json();}).then(function(rows) {
+            if (!rows.length) {
+                document.getElementById('incomeSummary').innerHTML = '<div style="color:#4b5563;font-size:12px">No income entries in the last 30 days.</div>';
+                return;
+            }
+            var byStruct = {};
+            rows.forEach(function(r) {
+                if (!byStruct[r.structure_name]) byStruct[r.structure_name] = {total: 0, types: []};
+                byStruct[r.structure_name].total += parseFloat(r.total_amount || 0);
+                byStruct[r.structure_name].types.push({type: r.income_type, amount: parseFloat(r.total_amount || 0)});
+            });
+            var grandTotal = Object.values(byStruct).reduce(function(a, b) { return a + b.total; }, 0);
+            var html = '<div style="display:flex;justify-content:space-between;margin-bottom:12px">' +
+                '<div style="font-size:11px;color:#8892a4">Total (30d)</div>' +
+                '<div style="font-size:18px;color:#22c55e;font-family:\'Geist Mono\',monospace">' + fmtISK(grandTotal) + ' ISK</div>' +
+                '</div>';
+            var maxVal = Math.max.apply(null, Object.values(byStruct).map(function(v){return v.total;}));
+            Object.keys(byStruct).sort(function(a,b){return byStruct[b].total - byStruct[a].total;}).forEach(function(name) {
+                var v = byStruct[name];
+                var pct = maxVal > 0 ? (v.total / maxVal * 100).toFixed(0) : 0;
+                html += '<div class="bar-row"><span class="bar-label">' + name + '</span>' +
+                    '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:#00d4aa"></div></div>' +
+                    '<span class="bar-val">' + fmtISK(v.total) + '</span></div>';
+            });
+            document.getElementById('incomeSummary').innerHTML = html;
+        });
+    }
+
+    window.loadIncomeTable = function() {
+        var structId = document.getElementById('incomeStructFilter').value;
+        var url = '/api/income' + (structId ? '?structure_id=' + structId : '');
+        fetch(url).then(function(r){return r.json();}).then(function(rows) {
+            var typeFilter = document.getElementById('incomeTypeFilter').value;
+            if (typeFilter) rows = rows.filter(function(r) { return r.income_type === typeFilter; });
+            if (!rows.length) {
+                document.getElementById('incomeTable').innerHTML = '<div class="empty-state" style="padding:20px 0">No income entries yet.</div>';
+                return;
+            }
+            var html = '<table class="data-grid"><thead><tr>' +
+                '<th>Date</th><th>Structure</th><th>Type</th><th>Amount (ISK)</th><th>Notes</th><th></th>' +
+                '</tr></thead><tbody>';
+            rows.forEach(function(r) {
+                html += '<tr>' +
+                    '<td class="mono">' + r.entry_date + '</td>' +
+                    '<td>' + (r.structure_name||'—') + '</td>' +
+                    '<td><span class="pill teal">' + typeLabel(r.income_type) + '</span></td>' +
+                    '<td class="mono r" style="color:#22c55e">' + fmtISK(r.amount) + '</td>' +
+                    '<td style="color:#6b7280;font-size:11px">' + (r.notes||'') + '</td>' +
+                    '<td><button class="btn-sm danger" onclick="deleteIncome(' + r.id + ')">×</button></td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('incomeTable').innerHTML = html;
+        });
+    };
+
+    window.deleteIncome = function(id) {
+        if (!confirm('Delete this income entry?')) return;
+        fetch('/api/income/' + id, {method:'DELETE'}).then(function(r){return r.json();}).then(function(d) {
+            if (d.ok) { espfmToast('Entry deleted.', 'info'); loadIncomeTable(); loadSummary(); }
+        });
+    };
+
+    window.submitIncome = function() {
+        var errs = document.getElementById('incomeFormErrors');
+        errs.hidden = true;
+        var payload = {
+            structure_id: document.getElementById('incomeFormStruct').value,
+            income_type: document.getElementById('incomeFormType').value,
+            amount: parseFloat(document.getElementById('incomeFormAmount').value),
+            entry_date: document.getElementById('incomeFormDate').value || undefined,
+            notes: document.getElementById('incomeFormNotes').value,
+        };
+        fetch('/api/income', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
+            .then(function(r){return r.json();})
+            .then(function(d) {
+                if (d.errors) { errs.textContent = d.errors.join(' '); errs.hidden = false; return; }
+                if (d.error) { espfmToast(d.error, 'error'); return; }
+                espfmToast('Income entry added.', 'success');
+                document.getElementById('incomeFormAmount').value = '';
+                document.getElementById('incomeFormNotes').value = '';
+                loadIncomeTable();
+                loadSummary();
+            });
+    };
+
+    var today = new Date().toISOString().slice(0,10);
+    document.getElementById('incomeFormDate').value = today;
+    loadStructures();
+})();
+</script>
