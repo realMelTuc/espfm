@@ -1,21 +1,17 @@
 <style>
 [hidden]{display:none!important}
-.prof-card { background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:16px;margin-bottom:10px; }
-.prof-card-top { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px; }
-.prof-card-name { font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#fff;font-weight:600; }
-.prof-card-meta { font-size:10px;color:#6b7280;margin-top:2px; }
-.prof-isk-row { display:flex;gap:20px;flex-wrap:wrap;margin-top:8px; }
-.prof-isk-item { }
-.prof-isk-val { font-size:14px;font-family:'Geist Mono',monospace; }
-.prof-isk-label { font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px; }
+.prof-card{background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:16px;margin-bottom:10px;}
+.prof-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.prof-card-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#fff;font-weight:600;}
+.prof-card-meta{font-size:10px;color:#6b7280;margin-top:2px;}
+.prof-isk-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;}
+.prof-isk-val{font-size:14px;font-family:'Geist Mono',monospace;}
+.prof-isk-label{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;}
 </style>
 
 <div class="page-header">
-    <div class="page-header-row">
-        <div class="page-icon green">📊</div>
-        <h1 class="page-title">Profitability Analysis</h1>
-    </div>
-    <div class="page-subtitle">Monthly P&L per structure — income vs fuel costs</div>
+    <div class="page-header-row"><div class="page-icon green">📊</div><h1 class="page-title">Profitability Analysis</h1></div>
+    <div class="page-subtitle">Monthly P&amp;L per structure — income vs fuel costs</div>
 </div>
 
 <div class="stats-row" id="profStatsRow">
@@ -27,10 +23,7 @@
 
 <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
     <select id="profFilter" onchange="filterProf()" style="background:#1a1f2e;border:1px solid #1e2530;border-radius:4px;padding:7px 10px;color:#e6e8eb;font-size:12px">
-        <option value="">All Structures</option>
-        <option value="profitable">Profitable Only</option>
-        <option value="loss">Loss Only</option>
-        <option value="break_even">Break-Even Only</option>
+        <option value="">All Structures</option><option value="profitable">Profitable Only</option><option value="loss">Loss Only</option><option value="break_even">Break-Even Only</option>
     </select>
     <button class="btn teal" onclick="recordAllSnapshots()" style="margin-left:auto">Record Snapshots</button>
 </div>
@@ -38,123 +31,67 @@
 <div id="profContent"></div>
 
 <script>
-(function() {
-    var _profData = [];
-
-    function fmtISK(n, signed) {
-        if (!n && n !== 0) return '—';
-        var abs = Math.abs(n);
-        var s = '';
-        if (signed) s = n >= 0 ? '+' : '';
-        if (abs >= 1e9) return s + (n/1e9).toFixed(2)+'B';
-        if (abs >= 1e6) return s + (n/1e6).toFixed(2)+'M';
-        if (abs >= 1e3) return s + (n/1e3).toFixed(1)+'K';
-        return s + Number(n).toFixed(0);
+(function(){
+    var _profData=[];
+    function fmtISK(n,signed){
+        if(!n&&n!==0)return'—';
+        var abs=Math.abs(n),s='';
+        if(signed)s=n>=0?'+':'';
+        if(abs>=1e9)return s+(n/1e9).toFixed(2)+'B';
+        if(abs>=1e6)return s+(n/1e6).toFixed(2)+'M';
+        if(abs>=1e3)return s+(n/1e3).toFixed(1)+'K';
+        return s+Number(n).toFixed(0);
     }
-
-    function load() {
-        fetch('/api/profitability/summary').then(function(r){return r.json();}).then(function(data) {
-            _profData = data;
-            var profitable=0, breakEven=0, loss=0, net=0;
-            data.forEach(function(s) {
-                if (s.profit_status === 'profitable') profitable++;
-                else if (s.profit_status === 'break_even') breakEven++;
-                else if (s.profit_status === 'loss') loss++;
-                net += s.monthly_profit || 0;
-            });
-            document.getElementById('profProfitable').textContent = profitable;
-            document.getElementById('profBreakEven').textContent = breakEven;
-            document.getElementById('profLoss').textContent = loss;
-            var netEl = document.getElementById('profNetTotal');
-            netEl.textContent = (net >= 0 ? '+' : '') + fmtISK(net);
-            netEl.style.color = net >= 0 ? '#22c55e' : '#ef4444';
+    function load(){
+        fetch('/api/profitability/summary').then(function(r){return r.json();}).then(function(data){
+            _profData=data;
+            var profitable=0,breakEven=0,loss=0,net=0;
+            data.forEach(function(s){if(s.profit_status==='profitable')profitable++;else if(s.profit_status==='break_even')breakEven++;else if(s.profit_status==='loss')loss++;net+=s.monthly_profit||0;});
+            document.getElementById('profProfitable').textContent=profitable;
+            document.getElementById('profBreakEven').textContent=breakEven;
+            document.getElementById('profLoss').textContent=loss;
+            var netEl=document.getElementById('profNetTotal');
+            netEl.textContent=(net>=0?'+':'')+fmtISK(net);
+            netEl.style.color=net>=0?'#22c55e':'#ef4444';
             renderProf(data);
-        }).catch(function() {
-            document.getElementById('profContent').innerHTML = '<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';
-        });
+        }).catch(function(){document.getElementById('profContent').innerHTML='<div class="alert warning">No data. Initialize DB tables from the Dashboard.</div>';});
     }
-
-    function renderProf(rows) {
-        if (!rows.length) {
-            document.getElementById('profContent').innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>No structures configured yet.</div>';
-            return;
-        }
-        var sorted = rows.slice().sort(function(a,b) { return b.monthly_profit - a.monthly_profit; });
-        var maxAbs = Math.max.apply(null, sorted.map(function(s){return Math.abs(s.monthly_profit);})) || 1;
-        var html = '<div style="margin-bottom:16px">';
-        sorted.forEach(function(s) {
-            var pColor = { profitable:'#22c55e', break_even:'#f59e0b', loss:'#ef4444', idle:'#6b7280' }[s.profit_status] || '#6b7280';
-            var barPct = Math.min(Math.abs(s.monthly_profit) / maxAbs * 100, 100).toFixed(0);
-            html += '<div class="prof-card">' +
-                '<div class="prof-card-top">' +
-                    '<div>' +
-                        '<div class="prof-card-name">' + s.name + '</div>' +
-                        '<div class="prof-card-meta">' + s.type_name + ' · ' + (s.system||'—') + '</div>' +
-                    '</div>' +
-                    '<div style="text-align:right">' +
-                        '<span class="pill ' + s.profit_status + '">' + s.profit_status.replace('_',' ') + '</span>' +
-                        '<div style="font-size:13px;font-family:\'Geist Mono\',monospace;margin-top:4px;color:' + pColor + '">' + (s.monthly_profit >= 0 ? '+' : '') + fmtISK(s.monthly_profit) + '/mo</div>' +
-                    '</div>' +
-                '</div>' +
-                '<div style="height:4px;background:#111620;border-radius:2px;overflow:hidden;margin-bottom:10px">' +
-                    '<div style="height:100%;width:' + barPct + '%;background:' + pColor + ';border-radius:2px;transition:width 0.4s"></div>' +
-                '</div>' +
-                '<div class="prof-isk-row">' +
-                    '<div class="prof-isk-item"><div class="prof-isk-val" style="color:#ef4444">−' + fmtISK(s.monthly_fuel_cost) + '</div><div class="prof-isk-label">Fuel Cost/mo</div></div>' +
-                    '<div class="prof-isk-item"><div class="prof-isk-val" style="color:#22c55e">+' + fmtISK(s.monthly_income) + '</div><div class="prof-isk-label">Income/mo (30d avg)</div></div>' +
-                    '<div class="prof-isk-item"><div class="prof-isk-val" style="color:#8892a4">' + s.burn_rate + ' /hr</div><div class="prof-isk-label">Burn Rate</div></div>' +
-                    '<div class="prof-isk-item"><div class="prof-isk-val" style="color:#8892a4">' + (s.margin_pct !== null ? s.margin_pct + '%' : '—') + '</div><div class="prof-isk-label">Margin</div></div>' +
-                '</div>' +
-                '<div style="margin-top:10px;display:flex;justify-content:flex-end">' +
-                    '<button class="btn-sm muted" onclick="loadHistory(' + s.id + ',this)">History</button>' +
-                '</div>' +
-                '<div class="hist_' + s.id + '" hidden style="margin-top:10px;border-top:1px solid #1e2530;padding-top:10px"></div>' +
-            '</div>';
+    function renderProf(rows){
+        if(!rows.length){document.getElementById('profContent').innerHTML='<div class="empty-state"><div class="empty-icon">📊</div>No structures configured yet.</div>';return;}
+        var sorted=rows.slice().sort(function(a,b){return b.monthly_profit-a.monthly_profit;});
+        var maxAbs=Math.max.apply(null,sorted.map(function(s){return Math.abs(s.monthly_profit);}))||1;
+        var html='<div style="margin-bottom:16px">';
+        sorted.forEach(function(s){
+            var pColor={profitable:'#22c55e',break_even:'#f59e0b',loss:'#ef4444',idle:'#6b7280'}[s.profit_status]||'#6b7280';
+            var barPct=Math.min(Math.abs(s.monthly_profit)/maxAbs*100,100).toFixed(0);
+            html+='<div class="prof-card"><div class="prof-card-top"><div><div class="prof-card-name">'+s.name+'</div><div class="prof-card-meta">'+s.type_name+' · '+(s.system||'—')+'</div></div>'
+                +'<div style="text-align:right"><span class="pill '+s.profit_status+'">'+s.profit_status.replace('_',' ')+'</span><div style="font-size:13px;font-family:\'Geist Mono\',monospace;margin-top:4px;color:'+pColor+'">'+(s.monthly_profit>=0?'+':'')+fmtISK(s.monthly_profit)+'/mo</div></div></div>'
+                +'<div style="height:4px;background:#111620;border-radius:2px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:'+barPct+'%;background:'+pColor+';border-radius:2px;transition:width 0.4s"></div></div>'
+                +'<div class="prof-isk-row"><div class="prof-isk-item"><div class="prof-isk-val" style="color:#ef4444">−'+fmtISK(s.monthly_fuel_cost)+'</div><div class="prof-isk-label">Fuel Cost/mo</div></div><div class="prof-isk-item"><div class="prof-isk-val" style="color:#22c55e">+'+fmtISK(s.monthly_income)+'</div><div class="prof-isk-label">Income/mo (30d avg)</div></div><div class="prof-isk-item"><div class="prof-isk-val" style="color:#8892a4">'+s.burn_rate+' /hr</div><div class="prof-isk-label">Burn Rate</div></div><div class="prof-isk-item"><div class="prof-isk-val" style="color:#8892a4">'+(s.margin_pct!==null?s.margin_pct+'%':'—')+'</div><div class="prof-isk-label">Margin</div></div></div>'
+                +'<div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="btn-sm muted" onclick="loadHistory('+s.id+',this)">History</button></div>'
+                +'<div class="hist_'+s.id+'" hidden style="margin-top:10px;border-top:1px solid #1e2530;padding-top:10px"></div></div>';
         });
-        html += '</div>';
-        document.getElementById('profContent').innerHTML = html;
+        html+='</div>';
+        document.getElementById('profContent').innerHTML=html;
     }
-
-    window.filterProf = function() {
-        var f = document.getElementById('profFilter').value;
-        var rows = f ? _profData.filter(function(s){ return s.profit_status === f; }) : _profData;
-        renderProf(rows);
-    };
-
-    window.loadHistory = function(id, btn) {
-        var el = document.querySelector('.hist_' + id);
-        if (!el) return;
-        if (!el.hidden) { el.hidden = true; btn.textContent = 'History'; return; }
-        btn.textContent = 'Hide';
-        fetch('/api/profitability/' + id + '/history').then(function(r){return r.json();}).then(function(rows) {
-            if (!rows.length) { el.innerHTML = '<div style="color:#4b5563;font-size:11px">No snapshots recorded yet. Click "Record Snapshots" to save current state.</div>'; el.hidden = false; return; }
-            var html = '<table class="data-grid" style="font-size:11px"><thead><tr><th>Date</th><th>Fuel Cost</th><th>Income</th><th>Profit</th><th>Status</th></tr></thead><tbody>';
-            rows.forEach(function(r) {
-                var c = {profitable:'#22c55e',break_even:'#f59e0b',loss:'#ef4444',idle:'#6b7280'}[r.status]||'#6b7280';
-                html += '<tr><td class="mono">' + r.snapshot_date + '</td>' +
-                    '<td class="mono" style="color:#ef4444">−' + fmtISK(r.monthly_fuel_cost) + '</td>' +
-                    '<td class="mono" style="color:#22c55e">+' + fmtISK(r.monthly_income) + '</td>' +
-                    '<td class="mono" style="color:' + c + '">' + (r.monthly_profit >= 0 ? '+' : '') + fmtISK(r.monthly_profit) + '</td>' +
-                    '<td><span class="pill ' + r.status + '">' + (r.status||'—').replace('_',' ') + '</span></td>' +
-                    '</tr>';
-            });
-            html += '</tbody></table>';
-            el.innerHTML = html;
-            el.hidden = false;
+    window.filterProf=function(){var f=document.getElementById('profFilter').value;renderProf(f?_profData.filter(function(s){return s.profit_status===f;}):_profData);};
+    window.loadHistory=function(id,btn){
+        var el=document.querySelector('.hist_'+id);
+        if(!el)return;
+        if(!el.hidden){el.hidden=true;btn.textContent='History';return;}
+        btn.textContent='Hide';
+        fetch('/api/profitability/'+id+'/history').then(function(r){return r.json();}).then(function(rows){
+            if(!rows.length){el.innerHTML='<div style="color:#4b5563;font-size:11px">No snapshots recorded yet.</div>';el.hidden=false;return;}
+            var html='<table class="data-grid" style="font-size:11px"><thead><tr><th>Date</th><th>Fuel Cost</th><th>Income</th><th>Profit</th><th>Status</th></tr></thead><tbody>';
+            rows.forEach(function(r){var c={profitable:'#22c55e',break_even:'#f59e0b',loss:'#ef4444',idle:'#6b7280'}[r.status]||'#6b7280';html+='<tr><td class="mono">'+r.snapshot_date+'</td><td class="mono" style="color:#ef4444">−'+fmtISK(r.monthly_fuel_cost)+'</td><td class="mono" style="color:#22c55e">+'+fmtISK(r.monthly_income)+'</td><td class="mono" style="color:'+c+'">'+(r.monthly_profit>=0?'+':'')+fmtISK(r.monthly_profit)+'</td><td><span class="pill '+(r.status||'')+'">'+( r.status||'—').replace('_',' ')+'</span></td></tr>';});
+            html+='</tbody></table>';
+            el.innerHTML=html; el.hidden=false;
         });
     };
-
-    window.recordAllSnapshots = function() {
-        if (!_profData.length) { espfmToast('No structures to snapshot.', 'warning'); return; }
-        var promises = _profData.map(function(s) {
-            return fetch('/api/profitability/' + s.id + '/snapshot', {method:'POST'}).then(function(r){return r.json();});
-        });
-        Promise.all(promises).then(function() {
-            espfmToast('Snapshots recorded for all structures.', 'success');
-            load();
-        });
+    window.recordAllSnapshots=function(){
+        if(!_profData.length){espfmToast('No structures to snapshot.','warning');return;}
+        Promise.all(_profData.map(function(s){return fetch('/api/profitability/'+s.id+'/snapshot',{method:'POST'}).then(function(r){return r.json();});})).then(function(){espfmToast('Snapshots recorded for all structures.','success');load();});
     };
-
     load();
 })();
 </script>
